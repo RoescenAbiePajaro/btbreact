@@ -33,6 +33,10 @@ export default function CanvasApp({ userData }) {
   const [transformStart, setTransformStart] = useState(null);
   const [isTranslating, setIsTranslating] = useState(false);
   
+  // Add new state for tracking dragged text box
+  const [draggedTextBox, setDraggedTextBox] = useState(null);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+
   useEffect(() => {
     const cvs = canvasRef.current;
     const wrap = wrapperRef.current;
@@ -454,6 +458,36 @@ export default function CanvasApp({ userData }) {
     setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)));
   }
 
+  // Add new handler functions
+  const handleTextMouseDown = (e, id) => {
+    e.stopPropagation();
+    const textBox = textBoxes.find(box => box.id === id);
+    if (textBox) {
+      setDraggedTextBox(textBox);
+      setDragStartPos({
+        x: e.clientX - textBox.x,
+        y: e.clientY - textBox.y
+      });
+    }
+  };
+
+  const handleTextMouseMove = (e) => {
+    if (!draggedTextBox) return;
+    
+    const newX = e.clientX - dragStartPos.x;
+    const newY = e.clientY - dragStartPos.y;
+    
+    setTextBoxes(textBoxes.map(box => 
+      box.id === draggedTextBox.id 
+        ? { ...box, x: newX, y: newY }
+        : box
+    ));
+  };
+
+  const handleTextMouseUp = () => {
+    setDraggedTextBox(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-black p-4 flex flex-col">
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between mb-4">
@@ -559,6 +593,9 @@ export default function CanvasApp({ userData }) {
           <div
             ref={wrapperRef}
             className="relative flex-1 border border-dashed rounded-lg overflow-hidden w-full h-[50vh] sm:h-[70vh]"
+            onMouseMove={handleTextMouseMove}
+            onMouseUp={handleTextMouseUp}
+            onMouseLeave={handleTextMouseUp}
           >
             <div
               style={{
@@ -643,23 +680,22 @@ export default function CanvasApp({ userData }) {
             )}
 
             {/* Render text boxes on canvas */}
-            {textBoxes.map(box => (
+            {textBoxes.map((box) => (
               <div
                 key={box.id}
                 onDoubleClick={() => handleTextBoxDoubleClick(box.id)}
+                onMouseDown={(e) => handleTextMouseDown(e, box.id)}
                 style={{
-                  position: "absolute",
-                  left: `${(box.x / (canvasRef.current.width / window.devicePixelRatio)) * 100}%`,
-                  top: `${(box.y / (canvasRef.current.height / window.devicePixelRatio)) * 100}%`,
-                  transform: `scale(${1 / zoom})`,
-                  transformOrigin: "top left",
-                  color: box.color || color,
-                  fontSize: `${box.fontSize * (1 / zoom)}px`,
+                  position: 'absolute',
+                  left: `${box.x}px`,
+                  top: `${box.y}px`,
+                  fontSize: `${box.fontSize}px`,
                   fontFamily: box.font,
-                  cursor: "text",
-                  userSelect: "none",
-                  whiteSpace: "pre",
-                  zIndex: 5,
+                  color: box.color,
+                  cursor: 'move',
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'auto',
                 }}
               >
                 {box.content || (editingTextBoxId !== box.id && placeholderText)}
