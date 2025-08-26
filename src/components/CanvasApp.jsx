@@ -102,6 +102,12 @@ export default function CanvasApp({ userData }) {
       const pos = getPointerPos(e);
       setTextData({ ...textData, x: pos.x, y: pos.y, content: "" });
       setIsTyping(true);
+      // Focus the text input immediately
+      setTimeout(() => {
+        if (textInputRef.current) {
+          textInputRef.current.focus();
+        }
+      }, 0);
       return;
     }
 
@@ -166,8 +172,15 @@ export default function CanvasApp({ userData }) {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.lineWidth = brushSize;
-    ctx.globalCompositeOperation = isEraser ? "destination-out" : "source-over";
-    ctx.strokeStyle = isEraser ? "rgba(0,0,0,1)" : color;
+    
+    if (isEraser) {
+      // Use source-over with white color to erase to background
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = 'white';
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = color;
+    }
   }
 
   function draw(e) {
