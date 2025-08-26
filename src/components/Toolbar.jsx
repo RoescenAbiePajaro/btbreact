@@ -1,5 +1,3 @@
-Toolbar.jsx
-
 import React from "react";
 
 export default function Toolbar({
@@ -16,23 +14,43 @@ export default function Toolbar({
   setColor,
   brushSize,
   setBrushSize,
-  handleFileInsert
+  handleFileInsert,
+  toolMode,
+  setToolMode,
 }) {
   return (
     <aside className="w-full sm:w-20 bg-black rounded-2xl p-3 shadow flex sm:flex-col flex-row items-center gap-3 sm:gap-2 overflow-x-auto">
       <div className="flex sm:flex-col gap-2 w-full items-center justify-center">
         <button
-          title="Brush / Brush"
-          onClick={() => setIsEraser(false)}
+          title="Add Text"
+          onClick={() => {
+            setToolMode("text");
+            setIsEraser(false);
+          }}
           className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            !isEraser ? "ring-2 ring-indigo-200" : ""
+            toolMode === "text" ? "ring-2 ring-indigo-200" : ""
+          }`}
+        >
+          📝
+        </button>
+        <button
+          title="Brush / Brush"
+          onClick={() => {
+            setToolMode("draw");
+            setIsEraser(false);
+          }}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            !isEraser && toolMode === "draw" ? "ring-2 ring-indigo-200" : ""
           }`}
         >
           🖌️
         </button>
         <button
           title="Eraser"
-          onClick={() => setIsEraser(true)}
+          onClick={() => {
+            setToolMode("draw");
+            setIsEraser(true);
+          }}
           className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             isEraser ? "ring-2 ring-indigo-200" : ""
           }`}
