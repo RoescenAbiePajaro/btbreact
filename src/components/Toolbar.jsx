@@ -1,3 +1,4 @@
+// Toolbar.jsx
 import React from "react";
 
 export default function Toolbar({
@@ -17,6 +18,15 @@ export default function Toolbar({
   handleFileInsert,
   toolMode,
   setToolMode,
+  textData,
+  setTextData,
+  drawTextOnCanvas,
+  isTyping,
+  setIsTyping,
+  // Add new props for translate
+  translate,
+  setTranslate,
+  resetTransform,
 }) {
   return (
     <aside className="w-full sm:w-20 bg-black rounded-2xl p-3 shadow flex sm:flex-col flex-row items-center gap-3 sm:gap-2 overflow-x-auto">
@@ -26,6 +36,10 @@ export default function Toolbar({
           onClick={() => {
             setToolMode("text");
             setIsEraser(false);
+            // If already in text mode, activate text input
+            if (toolMode === "text") {
+              setIsTyping(true);
+            }
           }}
           className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             toolMode === "text" ? "ring-2 ring-indigo-200" : ""
@@ -38,6 +52,7 @@ export default function Toolbar({
           onClick={() => {
             setToolMode("draw");
             setIsEraser(false);
+            setIsTyping(false);
           }}
           className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             !isEraser && toolMode === "draw" ? "ring-2 ring-indigo-200" : ""
@@ -50,6 +65,7 @@ export default function Toolbar({
           onClick={() => {
             setToolMode("draw");
             setIsEraser(true);
+            setIsTyping(false);
           }}
           className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             isEraser ? "ring-2 ring-indigo-200" : ""
@@ -58,11 +74,13 @@ export default function Toolbar({
           🧽
         </button>
         <button
-          title="Clear"
-          onClick={clearCanvas}
-          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          title="Translate"
+          onClick={() => setToolMode("translate")}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            toolMode === "translate" ? "ring-2 ring-indigo-200" : ""
+          }`}
         >
-          🗑️
+          🚚
         </button>
         <button
           title="Undo"
@@ -99,6 +117,14 @@ export default function Toolbar({
           －
         </button>
       </div>
+      
+      {/* Display current transform values */}
+      {toolMode === "translate" && (
+        <div className="text-white text-xs mt-2">
+          X: {Math.round(translate.x)}<br />
+          Y: {Math.round(translate.y)}
+        </div>
+      )}
     </aside>
   );
 }
