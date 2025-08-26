@@ -1,3 +1,5 @@
+Toolbar.jsx
+
 import React from "react";
 
 export default function Toolbar({
@@ -19,15 +21,14 @@ export default function Toolbar({
   return (
     <aside className="w-full sm:w-20 bg-black rounded-2xl p-3 shadow flex sm:flex-col flex-row items-center gap-3 sm:gap-2 overflow-x-auto">
       <div className="flex sm:flex-col gap-2 w-full items-center justify-center">
-        <div className="text-xs text-white hidden sm:block">Tools</div>
         <button
-          title="Brush / Marker"
+          title="Brush / Brush"
           onClick={() => setIsEraser(false)}
           className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             !isEraser ? "ring-2 ring-indigo-200" : ""
           }`}
         >
-          ✏️
+          🖌️
         </button>
         <button
           title="Eraser"

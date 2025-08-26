@@ -1,3 +1,4 @@
+// CanvasApp.jsx
 import React, { useRef, useState, useEffect } from "react";
 import Toolbar from "./Toolbar";
 
@@ -12,6 +13,11 @@ export default function CanvasApp({ userData }) {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [zoom, setZoom] = useState(1);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
+  const [toolMode, setToolMode] = useState("draw");
+  const [selectedArea, setSelectedArea] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [insertedImages, setInsertedImages] = useState([]);
 
   useEffect(() => {
     const cvs = canvasRef.current;
@@ -19,45 +25,30 @@ export default function CanvasApp({ userData }) {
 
     const resize = () => {
       if (!cvs || !wrap) return;
-      
       const currentContent = cvs.toDataURL("image/png");
+      const currentImages = [...insertedImages];
       const r = wrap.getBoundingClientRect();
       const newWidth = Math.floor(r.width * window.devicePixelRatio);
       const newHeight = Math.floor(r.height * window.devicePixelRatio);
-      const originalWidth = cvs.width;
-      const originalHeight = cvs.height;
-      
+
       cvs.width = newWidth;
       cvs.height = newHeight;
       cvs.style.width = `${r.width}px`;
       cvs.style.height = `${r.height}px`;
-      
+
       const ctx = cvs.getContext("2d");
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-      
+
       if (currentContent) {
         const img = new Image();
         img.onload = () => {
-          const scale = Math.min(
-            newWidth / originalWidth,
-            newHeight / originalHeight
-          );
-          
-          const scaledWidth = originalWidth * scale;
-          const scaledHeight = originalHeight * scale;
-          const xOffset = (newWidth - scaledWidth) / 2;
-          const yOffset = (newHeight - scaledHeight) / 2;
-          
-          ctx.drawImage(
-            img, 
-            xOffset / window.devicePixelRatio, 
-            yOffset / window.devicePixelRatio, 
-            scaledWidth / window.devicePixelRatio, 
-            scaledHeight / window.devicePixelRatio
-          );
+          ctx.drawImage(img, 0, 0, r.width, r.height);
+          redrawInsertedImages();
         };
         img.src = currentContent;
+      } else {
+        redrawInsertedImages();
       }
     };
 
@@ -65,6 +56,18 @@ export default function CanvasApp({ userData }) {
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
+
+  const redrawInsertedImages = () => {
+    const cvs = canvasRef.current;
+    const ctx = cvs.getContext("2d");
+    insertedImages.forEach((imgData) => {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, imgData.x, imgData.y, imgData.width, imgData.height);
+      };
+      img.src = imgData.dataURL;
+    });
+  };
 
   function getPointerPos(e) {
     const cvs = canvasRef.current;
@@ -81,6 +84,46 @@ export default function CanvasApp({ userData }) {
   }
 
   function beginDraw(e) {
+    if (toolMode === "select") {
+      const pos = getPointerPos(e);
+      const clickedImage = insertedImages.find(
+        (img) =>
+          pos.x >= img.x &&
+          pos.x <= img.x + img.width &&
+          pos.y >= img.y &&
+          pos.y <= img.y + img.height
+      );
+
+      if (clickedImage) {
+        setSelectedArea({
+          x: clickedImage.x,
+          y: clickedImage.y,
+          width: clickedImage.width,
+          height: clickedImage.height,
+          type: "image",
+          imageData: clickedImage,
+        });
+        setIsDragging(true);
+        setDragOffset({
+          x: pos.x - clickedImage.x,
+          y: pos.y - clickedImage.y,
+        });
+        drawSelectionRectangle(clickedImage);
+        return;
+      }
+
+      if (selectedArea && isPointInSelection(pos)) {
+        setIsDragging(true);
+        setDragOffset({
+          x: pos.x - selectedArea.x,
+          y: pos.y - selectedArea.y,
+        });
+      } else {
+        setSelectedArea({ x: pos.x, y: pos.y, width: 0, height: 0, type: "area" });
+      }
+      return;
+    }
+
     e.preventDefault();
     const cvs = canvasRef.current;
     const ctx = cvs.getContext("2d");
@@ -99,6 +142,36 @@ export default function CanvasApp({ userData }) {
   }
 
   function draw(e) {
+    if (toolMode === "select") {
+      if (selectedArea && selectedArea.type === "area" && !isDragging) {
+        const pos = getPointerPos(e);
+        const newArea = {
+          ...selectedArea,
+          width: pos.x - selectedArea.x,
+          height: pos.y - selectedArea.y,
+        };
+        setSelectedArea(newArea);
+        drawSelectionRectangle(newArea);
+      } else if (isDragging && selectedArea) {
+        const pos = getPointerPos(e);
+        const newX = pos.x - dragOffset.x;
+        const newY = pos.y - dragOffset.y;
+        if (selectedArea.type === "image") {
+          setInsertedImages((prev) =>
+            prev.map((img) =>
+              img.dataURL === selectedArea.imageData.dataURL
+                ? { ...img, x: newX, y: newY }
+                : img
+            )
+          );
+          redrawCanvas();
+          setSelectedArea({ ...selectedArea, x: newX, y: newY });
+          drawSelectionRectangle({ ...selectedArea, x: newX, y: newY });
+        }
+      }
+      return;
+    }
+
     if (!isDrawing) return;
     const cvs = canvasRef.current;
     const ctx = cvs.getContext("2d");
@@ -108,14 +181,50 @@ export default function CanvasApp({ userData }) {
     setLastPos(pos);
   }
 
-  function endDraw() {
-    if (!isDrawing) return;
+  function drawSelectionRectangle(area) {
     const cvs = canvasRef.current;
     const ctx = cvs.getContext("2d");
+    redrawCanvas();
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#00ff00";
+    ctx.strokeRect(area.x, area.y, area.width, area.height);
+    ctx.restore();
+  }
+
+  function isPointInSelection(point) {
+    if (!selectedArea) return false;
+    return (
+      point.x >= selectedArea.x &&
+      point.x <= selectedArea.x + selectedArea.width &&
+      point.y >= selectedArea.y &&
+      point.y <= selectedArea.y + selectedArea.height
+    );
+  }
+
+  function endDraw() {
+    if (toolMode === "select") {
+      setIsDragging(false);
+      return;
+    }
+    if (!isDrawing) return;
+    const ctx = canvasRef.current.getContext("2d");
     ctx.closePath();
     ctx.restore();
     setIsDrawing(false);
     pushHistory();
+  }
+
+  function redrawCanvas() {
+    if (historyIndex >= 0) {
+      restoreFromDataURL(history[historyIndex]);
+    } else {
+      const cvs = canvasRef.current;
+      const ctx = cvs.getContext("2d");
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      redrawInsertedImages();
+    }
   }
 
   function pushHistory() {
@@ -133,6 +242,7 @@ export default function CanvasApp({ userData }) {
     const newIndex = historyIndex - 1;
     restoreFromDataURL(history[newIndex]);
     setHistoryIndex(newIndex);
+    setSelectedArea(null);
   }
 
   function redo() {
@@ -140,6 +250,7 @@ export default function CanvasApp({ userData }) {
     const newIndex = historyIndex + 1;
     restoreFromDataURL(history[newIndex]);
     setHistoryIndex(newIndex);
+    setSelectedArea(null);
   }
 
   function restoreFromDataURL(dataURL) {
@@ -150,14 +261,30 @@ export default function CanvasApp({ userData }) {
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       const rect = cvs.getBoundingClientRect();
       ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      redrawInsertedImages();
     };
     img.src = dataURL;
   }
 
+  // ✅ Clear all and reset defaults
   function clearCanvas() {
     const cvs = canvasRef.current;
     const ctx = cvs.getContext("2d");
     ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+    // Reset states
+    setInsertedImages([]);
+    setSelectedArea(null);
+    setIsEraser(false);
+    setToolMode("draw");
+    setBrushSize(8);
+    setColor("#ff66b2");
+    setZoom(1); // reset zoom back to 100%
+
+    // Reset history
+    setHistory([]);
+    setHistoryIndex(-1);
+
     pushHistory();
   }
 
@@ -191,7 +318,10 @@ export default function CanvasApp({ userData }) {
       const ratio = Math.min(cw / iw, ch / ih);
       const w = iw * ratio;
       const h = ih * ratio;
-      ctx.drawImage(img, 0, 0, w, h);
+      const x = (cw - w) / 2;
+      const y = (ch - h) / 2;
+      ctx.drawImage(img, x, y, w, h);
+      setInsertedImages((prev) => [...prev, { dataURL: cvs.toDataURL("image/png"), x, y, width: w, height: h }]);
       pushHistory();
       URL.revokeObjectURL(url);
     };
@@ -202,7 +332,7 @@ export default function CanvasApp({ userData }) {
   function zoomIn() {
     setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)));
   }
-  
+
   function zoomOut() {
     setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)));
   }
@@ -210,7 +340,7 @@ export default function CanvasApp({ userData }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-black p-4 flex flex-col">
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between mb-4">
-        <h1 className="text-2xl ">Beyond The Brush — Lite</h1>
+        <h1 className="text-2xl">Beyond The Brush — Lite</h1>
       </header>
 
       <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col sm:flex-row">
@@ -229,43 +359,60 @@ export default function CanvasApp({ userData }) {
           brushSize={brushSize}
           setBrushSize={setBrushSize}
           handleFileInsert={handleFileInsert}
+          toolMode={toolMode}
+          setToolMode={setToolMode}
         />
 
         <section className="flex-1 bg-black rounded-2xl shadow p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-white">Colors</label>
-                <div className="flex gap-2">
-                  {["#ff66b2", "#4da6ff", "#66ff99", "#ffec66"].map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        setColor(c);
-                        setIsEraser(false);
-                      }}
-                      className="w-8 h-8 rounded"
-                      style={{ background: c }}
-                    />
-                  ))}
-                </div>
+              <div className="flex gap-2">
+                {["#ff00ff", "#0066ff", "#00ff00", "#fff500"].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => {
+                      setColor(c);
+                      setIsEraser(false);
+                    }}
+                    className="w-8 h-8 rounded"
+                    style={{ background: c }}
+                  />
+                ))}
               </div>
 
+              {/* Brush/Eraser size control */}
               <div className="flex items-center gap-2">
                 <label className="text-xs text-white">Size</label>
                 <input
                   type="range"
                   min={1}
-                  max={60}
+                  max={200}
                   value={brushSize}
                   onChange={(e) => setBrushSize(Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={brushSize}
+                  onChange={(e) => {
+                    let val = Number(e.target.value);
+                    if (val < 1) val = 1;
+                    if (val > 200) val = 200;
+                    setBrushSize(val);
+                  }}
+                  className="w-16 px-1 py-0.5 rounded text-black text-sm"
                 />
               </div>
 
               <div className="flex items-center gap-2">
                 <label className="text-xs text-white">Mode</label>
                 <div className="px-2 py-1 rounded bg-gray-50 text-sm">
-                  {isEraser ? "Eraser" : "Marker"}
+                  {toolMode === "select"
+                    ? "Select"
+                    : isEraser
+                    ? "Eraser"
+                    : "Brush"}
                 </div>
               </div>
             </div>
@@ -302,8 +449,7 @@ export default function CanvasApp({ userData }) {
           </div>
 
           <footer className="mt-3 text-right text-xs text-gray-500">
-            Tip: Use brush size slider and colors. Zoom doesn't affect brush or
-            eraser size.
+            Tip: Use brush size slider or type size directly. Zoom resets to 100% when you Clear All.
           </footer>
         </section>
       </main>
