@@ -1,14 +1,12 @@
-import React, { useRef, useState, useEffect } from "react";
+// App.jsx
 
-// Beyond The Brush Lite
-// Single-file React component. Drop into src/App.jsx (or App.jsx) in a Vite/CRA project.
-// Uses TailwindCSS classes for styling. Make sure Tailwind is configured in your project.
+import React, { useRef, useState, useEffect } from "react";
 
 export default function App() {
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState("#ff66b2"); // default pink
+  const [color, setColor] = useState("#ff66b2");
   const [brushSize, setBrushSize] = useState(8);
   const [isEraser, setIsEraser] = useState(false);
   const [history, setHistory] = useState([]);
@@ -16,33 +14,63 @@ export default function App() {
   const [zoom, setZoom] = useState(1);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
 
-  // Make canvas fill wrapper responsively
+  // Make canvas fill wrapper responsively without stretching
   useEffect(() => {
     const cvs = canvasRef.current;
     const wrap = wrapperRef.current;
 
     const resize = () => {
       if (!cvs || !wrap) return;
+      
+      // Save current content
+      const currentContent = cvs.toDataURL("image/png");
+      
+      // Get new dimensions
       const r = wrap.getBoundingClientRect();
-
-      // Save current drawing
-      const tmp = document.createElement("canvas");
-      tmp.width = cvs.width;
-      tmp.height = cvs.height;
-      tmp.getContext("2d").drawImage(cvs, 0, 0);
-
-      // Set new responsive size
-      cvs.width = Math.floor(r.width * window.devicePixelRatio);
-      cvs.height = Math.floor(r.height * window.devicePixelRatio);
+      const newWidth = Math.floor(r.width * window.devicePixelRatio);
+      const newHeight = Math.floor(r.height * window.devicePixelRatio);
+      
+      // Preserve the original aspect ratio of the drawing
+      const originalWidth = cvs.width;
+      const originalHeight = cvs.height;
+      
+      // Set new dimensions
+      cvs.width = newWidth;
+      cvs.height = newHeight;
       cvs.style.width = `${r.width}px`;
       cvs.style.height = `${r.height}px`;
-
+      
       const ctx = cvs.getContext("2d");
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-      // redraw old content
-      ctx.drawImage(tmp, 0, 0, r.width, r.height);
+      
+      // Redraw the original content without stretching
+      if (currentContent) {
+        const img = new Image();
+        img.onload = () => {
+          // Calculate scaling to maintain aspect ratio
+          const scale = Math.min(
+            newWidth / originalWidth,
+            newHeight / originalHeight
+          );
+          
+          const scaledWidth = originalWidth * scale;
+          const scaledHeight = originalHeight * scale;
+          
+          // Center the drawing
+          const xOffset = (newWidth - scaledWidth) / 2;
+          const yOffset = (newHeight - scaledHeight) / 2;
+          
+          ctx.drawImage(
+            img, 
+            xOffset / window.devicePixelRatio, 
+            yOffset / window.devicePixelRatio, 
+            scaledWidth / window.devicePixelRatio, 
+            scaledHeight / window.devicePixelRatio
+          );
+        };
+        img.src = currentContent;
+      }
     };
 
     resize();
@@ -62,7 +90,7 @@ export default function App() {
     const y =
       ((clientY - rect.top) / rect.height) *
       (cvs.height / window.devicePixelRatio);
-    return { x, y }; // ✅ no / zoom
+    return { x, y };
   }
 
   function beginDraw(e) {
@@ -78,7 +106,7 @@ export default function App() {
     ctx.moveTo(pos.x, pos.y);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.lineWidth = brushSize; // ✅ no / zoom
+    ctx.lineWidth = brushSize;
     ctx.globalCompositeOperation = isEraser ? "destination-out" : "source-over";
     ctx.strokeStyle = isEraser ? "rgba(0,0,0,1)" : color;
   }
@@ -134,7 +162,7 @@ export default function App() {
       const ctx = cvs.getContext("2d");
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       const rect = cvs.getBoundingClientRect();
-      ctx.drawImage(img, 0, 0, rect.width, rect.height); // ✅ no / zoom
+      ctx.drawImage(img, 0, 0, rect.width, rect.height);
     };
     img.src = dataURL;
   }
@@ -176,7 +204,7 @@ export default function App() {
       const ratio = Math.min(cw / iw, ch / ih);
       const w = iw * ratio;
       const h = ih * ratio;
-      ctx.drawImage(img, 0, 0, w, h); // ✅ no / zoom
+      ctx.drawImage(img, 0, 0, w, h);
       pushHistory();
       URL.revokeObjectURL(url);
     };
@@ -192,16 +220,16 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-white p-4 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-black to-black p-4 flex flex-col">
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Beyond The Brush — Lite</h1>
       </header>
 
       <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col sm:flex-row">
         {/* Sidebar tools */}
-        <aside className="w-full sm:w-20 bg-white rounded-2xl p-3 shadow flex sm:flex-col flex-row items-center gap-3 sm:gap-2 overflow-x-auto">
+        <aside className="w-full sm:w-20 bg-black rounded-2xl p-3 shadow flex sm:flex-col flex-row items-center gap-3 sm:gap-2 overflow-x-auto">
           <div className="flex sm:flex-col gap-2 w-full items-center justify-center">
-            <div className="text-xs text-gray-500 hidden sm:block">Tools</div>
+            <div className="text-xs text-white hidden sm:block">Tools</div>
             <button
               title="Brush / Marker"
               onClick={() => setIsEraser(false)}
@@ -250,14 +278,14 @@ export default function App() {
             </button>
           </div>
 
-          <div className="hidden sm:block w-full text-center text-xs text-gray-500">
+          <div className="hidden sm:block w-full text-center text-xs text-white">
             Zoom
           </div>
-          <div className="flex sm:flex-col items-center gap-2">
+          <div className="flex sm:flex-col items-center gap-2 text-white">
             <button onClick={zoomIn} className="w-10 h-10 rounded-lg">
               ＋
             </button>
-            <div className="text-sm">{Math.round(zoom * 100)}%</div>
+            <div className="text-sm text-white">{Math.round(zoom * 100)}%</div>
             <button onClick={zoomOut} className="w-10 h-10 rounded-lg">
               －
             </button>
@@ -265,11 +293,11 @@ export default function App() {
         </aside>
 
         {/* Canvas area */}
-        <section className="flex-1 bg-white rounded-2xl shadow p-4 flex flex-col">
+        <section className="flex-1 bg-black rounded-2xl shadow p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-500">Colors</label>
+                <label className="text-xs text-white">Colors</label>
                 <div className="flex gap-2">
                   {["#ff66b2", "#4da6ff", "#66ff99", "#ffec66"].map((c) => (
                     <button
@@ -286,7 +314,7 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-500">Size</label>
+                <label className="text-xs text-white">Size</label>
                 <input
                   type="range"
                   min={1}
@@ -297,7 +325,7 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-500">Mode</label>
+                <label className="text-xs text-white">Mode</label>
                 <div className="px-2 py-1 rounded bg-gray-50 text-sm">
                   {isEraser ? "Eraser" : "Marker"}
                 </div>
@@ -305,7 +333,7 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-3">
-              <label className="text-xs text-gray-500">Insert Image</label>
+              <label className="text-xs text-white">Insert Image</label>
               <input type="file" accept="image/*" onChange={handleFileInsert} />
             </div>
           </div>
@@ -336,7 +364,7 @@ export default function App() {
           </div>
 
           <footer className="mt-3 text-right text-xs text-gray-500">
-            Tip: Use brush size slider and colors. Zoom doesn’t affect brush or
+            Tip: Use brush size slider and colors. Zoom doesn't affect brush or
             eraser size.
           </footer>
         </section>
