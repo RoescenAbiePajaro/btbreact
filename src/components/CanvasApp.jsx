@@ -467,36 +467,7 @@ export default function CanvasApp({ userData }) {
         <h1 className="text-2xl">Beyond The Brush — Lite</h1>
       </header>
 
-      <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col sm:flex-row">
-        <Toolbar
-          isEraser={isEraser}
-          setIsEraser={setIsEraser}
-          clearCanvas={clearCanvas}
-          undo={undo}
-          redo={redo}
-          downloadImage={downloadImage}
-          zoom={zoom}
-          zoomIn={zoomIn}
-          zoomOut={zoomOut}
-          color={color}
-          setColor={setColor}
-          brushSize={brushSize}
-          setBrushSize={setBrushSize}
-          handleFileInsert={handleFileInsert}
-          toolMode={toolMode}
-          setToolMode={setToolMode}
-          // Pass text state and setters to Toolbar
-          textData={textData}
-          setTextData={setTextData}
-          drawTextOnCanvas={drawTextOnCanvas}
-          cancelTextInput={cancelTextInput}
-          isTyping={isTyping}
-          // Pass transform state and functions to Toolbar
-          translate={translate}
-          setTranslate={setTranslate}
-          resetTransform={resetTransform}
-        />
-
+      <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col">
         <section className="flex-1 bg-black rounded-2xl shadow p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-3 flex-wrap">
@@ -629,6 +600,36 @@ export default function CanvasApp({ userData }) {
             Tip: Use brush size slider or type size directly. Zoom resets to 100% when you Clear All.
           </footer>
         </section>
+        
+        {/* Bottom Navigation Toolbar */}
+        <Toolbar
+          isEraser={isEraser}
+          setIsEraser={setIsEraser}
+          clearCanvas={clearCanvas}
+          undo={undo}
+          redo={redo}
+          downloadImage={downloadImage}
+          zoom={zoom}
+          zoomIn={zoomIn}
+          zoomOut={zoomOut}
+          color={color}
+          setColor={setColor}
+          brushSize={brushSize}
+          setBrushSize={setBrushSize}
+          handleFileInsert={handleFileInsert}
+          toolMode={toolMode}
+          setToolMode={setToolMode}
+          // Pass text state and setters to Toolbar
+          textData={textData}
+          setTextData={setTextData}
+          drawTextOnCanvas={drawTextOnCanvas}
+          cancelTextInput={cancelTextInput}
+          isTyping={isTyping}
+          // Pass transform state and functions to Toolbar
+          translate={translate}
+          setTranslate={setTranslate}
+          resetTransform={resetTransform}
+        />
       </main>
     </div>
   );
