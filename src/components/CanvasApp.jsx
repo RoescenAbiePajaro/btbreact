@@ -17,26 +17,18 @@ export default function CanvasApp({ userData }) {
   const [selectedArea, setSelectedArea] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [insertedImages, setInsertedImages] = useState([]);
 
   // New state for handling text
   const [isTyping, setIsTyping] = useState(false);
   const [textData, setTextData] = useState({ x: 0, y: 0, content: "", fontSize: 24, font: "Arial" });
   const textInputRef = useRef(null);
   
-  // New state for text boxes
-  const [textBoxes, setTextBoxes] = useState([]);
-  const [editingTextBoxId, setEditingTextBoxId] = useState(null);
-  const [placeholderText, setPlaceholderText] = useState("Type something...");
-  
   // New state for translate
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [transformStart, setTransformStart] = useState(null);
   const [isTranslating, setIsTranslating] = useState(false);
   
-  // Add new state for tracking dragged text box
-  const [draggedTextBox, setDraggedTextBox] = useState(null);
-  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
-
   useEffect(() => {
     const cvs = canvasRef.current;
     const wrap = wrapperRef.current;
@@ -52,7 +44,7 @@ export default function CanvasApp({ userData }) {
       cvs.height = newHeight;
       cvs.style.width = `${r.width}px`;
       cvs.style.height = `${r.height}px`;
-     
+      cvs.style.backgroundColor = 'black';
 
       const ctx = cvs.getContext("2d");
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -66,10 +58,11 @@ export default function CanvasApp({ userData }) {
         const img = new Image();
         img.onload = () => {
           ctx.drawImage(img, 0, 0, r.width, r.height);
-          // Redraw all text boxes
-          redrawTextBoxes();
+          redrawInsertedImages();
         };
         img.src = currentContent;
+      } else {
+        redrawInsertedImages();
       }
     };
 
@@ -78,19 +71,15 @@ export default function CanvasApp({ userData }) {
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  // Redraw all text boxes on the canvas
-  const redrawTextBoxes = () => {
+  const redrawInsertedImages = () => {
     const cvs = canvasRef.current;
     const ctx = cvs.getContext("2d");
-    
-    textBoxes.forEach(box => {
-      if (box.content) {
-        ctx.save();
-        ctx.font = `${box.fontSize}px ${box.font}`;
-        ctx.fillStyle = box.color || color;
-        ctx.fillText(box.content, box.x, box.y);
-        ctx.restore();
-      }
+    insertedImages.forEach((imgData) => {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, imgData.x, imgData.y, imgData.width, imgData.height);
+      };
+      img.src = imgData.dataURL;
     });
   };
 
@@ -111,19 +100,9 @@ export default function CanvasApp({ userData }) {
   function beginDraw(e) {
     if (toolMode === "text") {
       const pos = getPointerPos(e);
-      // Create a new text box
-      const newTextBox = {
-        id: Date.now(),
-        x: pos.x,
-        y: pos.y,
-        content: "",
-        fontSize: textData.fontSize,
-        font: textData.font,
-        color: color
-      };
-      setTextBoxes([...textBoxes, newTextBox]);
-      setEditingTextBoxId(newTextBox.id);
+      setTextData({ ...textData, x: pos.x, y: pos.y, content: "" });
       setIsTyping(true);
+      // Focus the text input immediately
       setTimeout(() => {
         if (textInputRef.current) {
           textInputRef.current.focus();
@@ -132,6 +111,7 @@ export default function CanvasApp({ userData }) {
       return;
     }
 
+    // Handle translate mode
     if (toolMode === "translate") {
       const pos = getPointerPos(e);
       setTransformStart({ x: pos.x, y: pos.y, translate: { ...translate } });
@@ -141,7 +121,41 @@ export default function CanvasApp({ userData }) {
 
     if (toolMode === "select") {
       const pos = getPointerPos(e);
-      setSelectedArea({ x: pos.x, y: pos.y, width: 0, height: 0, type: "area" });
+      const clickedImage = insertedImages.find(
+        (img) =>
+          pos.x >= img.x &&
+          pos.x <= img.x + img.width &&
+          pos.y >= img.y &&
+          pos.y <= img.y + img.height
+      );
+
+      if (clickedImage) {
+        setSelectedArea({
+          x: clickedImage.x,
+          y: clickedImage.y,
+          width: clickedImage.width,
+          height: clickedImage.height,
+          type: "image",
+          imageData: clickedImage,
+        });
+        setIsDragging(true);
+        setDragOffset({
+          x: pos.x - clickedImage.x,
+          y: pos.y - clickedImage.y,
+        });
+        drawSelectionRectangle(clickedImage);
+        return;
+      }
+
+      if (selectedArea && isPointInSelection(pos)) {
+        setIsDragging(true);
+        setDragOffset({
+          x: pos.x - selectedArea.x,
+          y: pos.y - selectedArea.y,
+        });
+      } else {
+        setSelectedArea({ x: pos.x, y: pos.y, width: 0, height: 0, type: "area" });
+      }
       return;
     }
 
@@ -200,8 +214,18 @@ export default function CanvasApp({ userData }) {
         const pos = getPointerPos(e);
         const newX = pos.x - dragOffset.x;
         const newY = pos.y - dragOffset.y;
-        setSelectedArea({ ...selectedArea, x: newX, y: newY });
-        drawSelectionRectangle({ ...selectedArea, x: newX, y: newY });
+        if (selectedArea.type === "image") {
+          setInsertedImages((prev) =>
+            prev.map((img) =>
+              img.dataURL === selectedArea.imageData.dataURL
+                ? { ...img, x: newX, y: newY }
+                : img
+            )
+          );
+          redrawCanvas();
+          setSelectedArea({ ...selectedArea, x: newX, y: newY });
+          drawSelectionRectangle({ ...selectedArea, x: newX, y: newY });
+        }
       }
       return;
     }
@@ -219,6 +243,7 @@ export default function CanvasApp({ userData }) {
   function drawSelectionRectangle(area) {
     const cvs = canvasRef.current;
     const ctx = cvs.getContext("2d");
+    redrawCanvas();
     ctx.save();
     ctx.setLineDash([5, 5]);
     ctx.lineWidth = 2;
@@ -258,95 +283,45 @@ export default function CanvasApp({ userData }) {
   function redrawCanvas() {
     if (historyIndex >= 0) {
       restoreFromDataURL(history[historyIndex]);
-      // Redraw text boxes after restoring
-      setTimeout(redrawTextBoxes, 50);
     } else {
       const cvs = canvasRef.current;
       const ctx = cvs.getContext("2d");
       ctx.clearRect(0, 0, cvs.width, cvs.height);
+      redrawInsertedImages();
     }
-  }
-
-  // Function to handle text box double click for editing
-  function handleTextBoxDoubleClick(id) {
-    setEditingTextBoxId(id);
-    setIsTyping(true);
-    
-    // Find the text box to edit
-    const textBox = textBoxes.find(box => box.id === id);
-    if (textBox) {
-      setTextData({
-        x: textBox.x,
-        y: textBox.y,
-        content: textBox.content,
-        fontSize: textBox.fontSize,
-        font: textBox.font
-      });
-    }
-    
-    setTimeout(() => {
-      if (textInputRef.current) {
-        textInputRef.current.focus();
-        textInputRef.current.select();
-      }
-    }, 0);
-  }
-
-  // Function to update text box content
-  function updateTextBoxContent(id, content) {
-    const updatedBoxes = textBoxes.map(box => 
-      box.id === id ? { ...box, content } : box
-    );
-    setTextBoxes(updatedBoxes);
-    
-    // Update history with the new state
-    pushHistory();
   }
 
   // Function to draw text on the canvas
   function drawTextOnCanvas() {
-    if (editingTextBoxId) {
-      // Only update the text box if we're editing an existing one
-      const updatedBoxes = textBoxes.map(box => 
-        box.id === editingTextBoxId 
-          ? { ...box, content: textData.content, color: color }
-          : box
-      );
-      setTextBoxes(updatedBoxes);
-    } else if (textData.content) {
-      // Only add a new text box if there's content
-      const newTextBox = {
-        id: Date.now(),
-        x: textData.x,
-        y: textData.y,
-        content: textData.content,
-        fontSize: textData.fontSize,
-        font: textData.font,
-        color: color
-      };
-      setTextBoxes([...textBoxes, newTextBox]);
+    const cvs = canvasRef.current;
+    const ctx = cvs.getContext("2d");
+    if (!textData.content) {
+      setIsTyping(false);
+      return;
     }
     
-    setIsTyping(false);
-    setEditingTextBoxId(null);
-    setTextData({ ...textData, content: "" });
+    ctx.save();
+    ctx.font = `${textData.fontSize}px ${textData.font}`;
+    ctx.fillStyle = color;
+    ctx.fillText(textData.content, textData.x, textData.y);
+    ctx.restore();
     
-    // Update history after text changes
+    setIsTyping(false);
+    setTextData({ ...textData, content: "" });
     pushHistory();
+  }
+  
+  // Function to cancel text input without drawing
+  function cancelTextInput() {
+    setIsTyping(false);
+    setTextData({ ...textData, content: "" });
   }
   
   function pushHistory() {
     const cvs = canvasRef.current;
     const url = cvs.toDataURL("image/png");
     const newHist = history.slice(0, historyIndex + 1);
-    
-    // Include text boxes in the history state
-    const state = {
-      imageUrl: url,
-      textBoxes: [...textBoxes]
-    };
-    
-    newHist.push(JSON.stringify(state));
+    newHist.push(url);
     if (newHist.length > 50) newHist.shift();
     setHistory(newHist);
     setHistoryIndex(newHist.length - 1);
@@ -355,7 +330,7 @@ export default function CanvasApp({ userData }) {
   function undo() {
     if (historyIndex <= 0) return;
     const newIndex = historyIndex - 1;
-    restoreFromHistory(history[newIndex]);
+    restoreFromDataURL(history[newIndex]);
     setHistoryIndex(newIndex);
     setSelectedArea(null);
   }
@@ -363,30 +338,9 @@ export default function CanvasApp({ userData }) {
   function redo() {
     if (historyIndex >= history.length - 1) return;
     const newIndex = historyIndex + 1;
-    restoreFromHistory(history[newIndex]);
+    restoreFromDataURL(history[newIndex]);
     setHistoryIndex(newIndex);
     setSelectedArea(null);
-  }
-
-  function restoreFromHistory(stateString) {
-    try {
-      const state = JSON.parse(stateString);
-      const img = new Image();
-      img.onload = () => {
-        const cvs = canvasRef.current;
-        const ctx = cvs.getContext("2d");
-        ctx.clearRect(0, 0, cvs.width, cvs.height);
-        ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
-      };
-      img.src = state.imageUrl;
-      
-      // Restore text boxes state
-      if (state.textBoxes) {
-        setTextBoxes(state.textBoxes);
-      }
-    } catch (e) {
-      console.error("Error restoring from history:", e);
-    }
   }
 
   function restoreFromDataURL(dataURL) {
@@ -397,6 +351,7 @@ export default function CanvasApp({ userData }) {
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       const rect = cvs.getBoundingClientRect();
       ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      redrawInsertedImages();
     };
     img.src = dataURL;
   }
@@ -408,6 +363,8 @@ export default function CanvasApp({ userData }) {
     ctx.clearRect(0, 0, cvs.width, cvs.height);
 
     // Reset states
+    setInsertedImages([]);
+    setSelectedArea(null);
     setIsEraser(false);
     setToolMode("draw");
     setBrushSize(8);
@@ -421,8 +378,6 @@ export default function CanvasApp({ userData }) {
     // Reset text state
     setIsTyping(false);
     setTextData({ x: 0, y: 0, content: "", fontSize: 24, font: "Arial" });
-    setTextBoxes([]);
-    setEditingTextBoxId(null);
     
     // Reset transform state
     setTranslate({ x: 0, y: 0 });
@@ -450,6 +405,33 @@ export default function CanvasApp({ userData }) {
     link.click();
   }
 
+  function handleFileInsert(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const cvs = canvasRef.current;
+      const ctx = cvs.getContext("2d");
+      const rect = cvs.getBoundingClientRect();
+      const iw = img.width;
+      const ih = img.height;
+      const cw = rect.width / window.devicePixelRatio;
+      const ch = rect.height / window.devicePixelRatio;
+      const ratio = Math.min(cw / iw, ch / ih);
+      const w = iw * ratio;
+      const h = ih * ratio;
+      const x = (cw - w) / 2;
+      const y = (ch - h) / 2;
+      ctx.drawImage(img, x, y, w, h);
+      setInsertedImages((prev) => [...prev, { dataURL: cvs.toDataURL("image/png"), x, y, width: w, height: h }]);
+      pushHistory();
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+    e.target.value = null;
+  }
+
   function zoomIn() {
     setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)));
   }
@@ -457,36 +439,6 @@ export default function CanvasApp({ userData }) {
   function zoomOut() {
     setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)));
   }
-
-  // Add new handler functions
-  const handleTextMouseDown = (e, id) => {
-    e.stopPropagation();
-    const textBox = textBoxes.find(box => box.id === id);
-    if (textBox) {
-      setDraggedTextBox(textBox);
-      setDragStartPos({
-        x: e.clientX - textBox.x,
-        y: e.clientY - textBox.y
-      });
-    }
-  };
-
-  const handleTextMouseMove = (e) => {
-    if (!draggedTextBox) return;
-    
-    const newX = e.clientX - dragStartPos.x;
-    const newY = e.clientY - dragStartPos.y;
-    
-    setTextBoxes(textBoxes.map(box => 
-      box.id === draggedTextBox.id 
-        ? { ...box, x: newX, y: newY }
-        : box
-    ));
-  };
-
-  const handleTextMouseUp = () => {
-    setDraggedTextBox(null);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-black p-4 flex flex-col">
@@ -509,19 +461,19 @@ export default function CanvasApp({ userData }) {
           setColor={setColor}
           brushSize={brushSize}
           setBrushSize={setBrushSize}
+          handleFileInsert={handleFileInsert}
           toolMode={toolMode}
           setToolMode={setToolMode}
           // Pass text state and setters to Toolbar
           textData={textData}
           setTextData={setTextData}
           drawTextOnCanvas={drawTextOnCanvas}
+          cancelTextInput={cancelTextInput}
+          isTyping={isTyping}
           // Pass transform state and functions to Toolbar
           translate={translate}
           setTranslate={setTranslate}
           resetTransform={resetTransform}
-          // Pass placeholder text state
-          placeholderText={placeholderText}
-          setPlaceholderText={setPlaceholderText}
         />
 
         <section className="flex-1 bg-black rounded-2xl shadow p-4 flex flex-col">
@@ -593,9 +545,6 @@ export default function CanvasApp({ userData }) {
           <div
             ref={wrapperRef}
             className="relative flex-1 border border-dashed rounded-lg overflow-hidden w-full h-[50vh] sm:h-[70vh]"
-            onMouseMove={handleTextMouseMove}
-            onMouseUp={handleTextMouseUp}
-            onMouseLeave={handleTextMouseUp}
           >
             <div
               style={{
@@ -627,80 +576,32 @@ export default function CanvasApp({ userData }) {
 
             {/* Render the text input when isTyping is true */}
             {isTyping && (
-              <div
+              <input
+                ref={textInputRef}
+                type="text"
+                autoFocus
+                value={textData.content}
+                onChange={(e) => setTextData({ ...textData, content: e.target.value })}
+                onBlur={() => {
+                  // Don't automatically draw text on blur
+                  // User needs to click the "Add Text" button to commit
+                }}
                 style={{
                   position: "absolute",
-                  left: 0,
-                  top: 0,
-                  width: "100%",
-                  height: "100%",
-                  pointerEvents: "none",
-                  zIndex: 10,
+                  left: `${(textData.x / (canvasRef.current.width / window.devicePixelRatio)) * 100}%`,
+                  top: `${(textData.y / (canvasRef.current.height / window.devicePixelRatio)) * 100}%`,
+                  transform: `scale(${1 / zoom})`,
+                  transformOrigin: "top left",
+                  color: color,
+                  fontSize: textData.fontSize * (1 / zoom),
+                  background: "transparent",
+                  border: "1px dashed white",
+                  outline: "none",
+                  padding: "2px",
+                  lineHeight: 1,
                 }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    left: `${(textData.x / (canvasRef.current?.width / window.devicePixelRatio || 1)) * 100}%`,
-                    top: `${(textData.y / (canvasRef.current?.height / window.devicePixelRatio || 1)) * 100}%`,
-                    transform: `scale(${1 / zoom})`,
-                    transformOrigin: "top left",
-                    pointerEvents: "auto",
-                  }}
-                >
-                  <input
-                    ref={textInputRef}
-                    type="text"
-                    autoFocus
-                    value={textData.content}
-                    placeholder={placeholderText}
-                    onChange={(e) => setTextData({ ...textData, content: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        drawTextOnCanvas();
-                      }
-                    }}
-                    onBlur={drawTextOnCanvas}
-                    style={{
-                      color: color,
-                      fontSize: `${textData.fontSize}px`,
-                      fontFamily: textData.font,
-                      background: "rgba(0, 0, 0, 0.2)",
-                      border: "1px dashed rgba(255, 255, 255, 0.7)",
-                      outline: "none",
-                      padding: "2px 5px",
-                      lineHeight: 1,
-                      minWidth: "100px",
-                      borderRadius: "2px",
-                      boxShadow: "0 0 5px rgba(0, 0, 0, 0.3)",
-                    }}
-                  />
-                </div>
-              </div>
+              />
             )}
-
-            {/* Render text boxes on canvas */}
-            {textBoxes.map((box) => (
-              <div
-                key={box.id}
-                onDoubleClick={() => handleTextBoxDoubleClick(box.id)}
-                onMouseDown={(e) => handleTextMouseDown(e, box.id)}
-                style={{
-                  position: 'absolute',
-                  left: `${box.x}px`,
-                  top: `${box.y}px`,
-                  fontSize: `${box.fontSize}px`,
-                  fontFamily: box.font,
-                  color: box.color,
-                  cursor: 'move',
-                  userSelect: 'none',
-                  whiteSpace: 'nowrap',
-                  pointerEvents: 'auto',
-                }}
-              >
-                {box.content || (editingTextBoxId !== box.id && placeholderText)}
-              </div>
-            ))}
             </div>
           </div>
 
