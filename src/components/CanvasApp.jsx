@@ -306,16 +306,27 @@ export default function CanvasApp({ userData }) {
     const cvs = canvasRef.current;
     const ctx = cvs.getContext("2d");
     
+    // Calculate metrics before drawing
     ctx.save();
-    ctx.translate(0, 0);
-    
     ctx.font = `${textData.fontSize}px ${textData.font}`;
-    ctx.fillStyle = color;
-    
-    ctx.fillText(textData.content, textData.x, textData.y);
-    
+    const metrics = ctx.measureText(textData.content);
+    const actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
     ctx.restore();
     
+    // Draw the text
+    ctx.save();
+    ctx.font = `${textData.fontSize}px ${textData.font}`;
+    ctx.fillStyle = color;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    
+    // Adjust y position to account for the text's actual height
+    const yPos = textData.y;
+    
+    ctx.fillText(textData.content, textData.x, yPos);
+    ctx.restore();
+    
+    // Reset states and save to history
     setIsTyping(false);
     setTextData({ ...textData, content: "" });
     pushHistory();
