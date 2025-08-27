@@ -100,9 +100,14 @@ export default function CanvasApp({ userData }) {
   function beginDraw(e) {
     if (toolMode === "text") {
       const pos = getPointerPos(e);
-      setTextData({ ...textData, x: pos.x, y: pos.y, content: "" });
+      setTextData({ 
+        ...textData, 
+        x: pos.x, 
+        y: pos.y, 
+        content: "" 
+      });
       setIsTyping(true);
-      // Focus the text input immediately
+      
       setTimeout(() => {
         if (textInputRef.current) {
           textInputRef.current.focus();
@@ -293,17 +298,22 @@ export default function CanvasApp({ userData }) {
 
   // Function to draw text on the canvas
   function drawTextOnCanvas() {
-    const cvs = canvasRef.current;
-    const ctx = cvs.getContext("2d");
-    if (!textData.content) {
+    if (!textData.content.trim()) {
       setIsTyping(false);
       return;
     }
     
+    const cvs = canvasRef.current;
+    const ctx = cvs.getContext("2d");
+    
     ctx.save();
+    ctx.translate(0, 0);
+    
     ctx.font = `${textData.fontSize}px ${textData.font}`;
     ctx.fillStyle = color;
+    
     ctx.fillText(textData.content, textData.x, textData.y);
+    
     ctx.restore();
     
     setIsTyping(false);
@@ -582,10 +592,7 @@ export default function CanvasApp({ userData }) {
                 autoFocus
                 value={textData.content}
                 onChange={(e) => setTextData({ ...textData, content: e.target.value })}
-                onBlur={() => {
-                  // Don't automatically draw text on blur
-                  // User needs to click the "Add Text" button to commit
-                }}
+                onBlur={() => {}}
                 style={{
                   position: "absolute",
                   left: `${(textData.x / (canvasRef.current.width / window.devicePixelRatio)) * 100}%`,
@@ -599,6 +606,8 @@ export default function CanvasApp({ userData }) {
                   outline: "none",
                   padding: "2px",
                   lineHeight: 1,
+                  pointerEvents: 'auto',
+                  zIndex: 1000,
                 }}
               />
             )}
