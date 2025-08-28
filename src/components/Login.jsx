@@ -30,7 +30,7 @@ export default function Login({ onLogin }) {
         <form onSubmit={handleSubmit}>
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors mb-4"
+            className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-500 transition-colors mb-4"
           >
             Enter
           </button>
@@ -38,7 +38,7 @@ export default function Login({ onLogin }) {
           <button
             type="button"
             onClick={() => window.close()}
-            className="w-full bg-pink-600 text-white py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors"
+            className="w-full bg-pink-600 text-white py-3 rounded-lg font-semibold hover:bg-pink-600 transition-colors"
           >
             Exit
           </button>

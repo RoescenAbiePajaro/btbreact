@@ -29,46 +29,28 @@ export default function CanvasApp({ userData }) {
   const [transformStart, setTransformStart] = useState(null);
   const [isTranslating, setIsTranslating] = useState(false);
   
+  // Fixed canvas dimensions
+  const [canvasSize] = useState({ width: 800, height: 600 });
+  
   useEffect(() => {
     const cvs = canvasRef.current;
-    const wrap = wrapperRef.current;
+    if (!cvs) return;
 
-    const resize = () => {
-      if (!cvs || !wrap) return;
-      const currentContent = cvs.toDataURL("image/png");
-      const r = wrap.getBoundingClientRect();
-      const newWidth = Math.floor(r.width * window.devicePixelRatio);
-      const newHeight = Math.floor(r.height * window.devicePixelRatio);
+    // Set fixed canvas dimensions
+    cvs.width = canvasSize.width;
+    cvs.height = canvasSize.height;
+    cvs.style.width = `${canvasSize.width}px`;
+    cvs.style.height = `${canvasSize.height}px`;
+    cvs.style.backgroundColor = 'black';
 
-      cvs.width = newWidth;
-      cvs.height = newHeight;
-      cvs.style.width = `${r.width}px`;
-      cvs.style.height = `${r.height}px`;
-      cvs.style.backgroundColor = 'black';
+    const ctx = cvs.getContext("2d");
+    
+    // Set white background for drawing area
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
-      const ctx = cvs.getContext("2d");
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-      
-      // Set white background for drawing area
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, r.width, r.height);
-
-      if (currentContent) {
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, r.width, r.height);
-          redrawInsertedImages();
-        };
-        img.src = currentContent;
-      } else {
-        redrawInsertedImages();
-      }
-    };
-
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    redrawInsertedImages();
+    pushHistory();
   }, []);
 
   const redrawInsertedImages = () => {
@@ -89,11 +71,9 @@ export default function CanvasApp({ userData }) {
     const clientX = e.clientX ?? (e.touches && e.touches[0].clientX);
     const clientY = e.clientY ?? (e.touches && e.touches[0].clientY);
     const x =
-      ((clientX - rect.left) / rect.width) *
-      (cvs.width / window.devicePixelRatio);
+      ((clientX - rect.left) / rect.width) * cvs.width;
     const y =
-      ((clientY - rect.top) / rect.height) *
-      (cvs.height / window.devicePixelRatio);
+      ((clientY - rect.top) / rect.height) * cvs.height;
     return { x, y };
   }
 
@@ -370,8 +350,7 @@ export default function CanvasApp({ userData }) {
       const cvs = canvasRef.current;
       const ctx = cvs.getContext("2d");
       ctx.clearRect(0, 0, cvs.width, cvs.height);
-      const rect = cvs.getBoundingClientRect();
-      ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      ctx.drawImage(img, 0, 0);
       redrawInsertedImages();
     };
     img.src = dataURL;
@@ -414,12 +393,11 @@ export default function CanvasApp({ userData }) {
 
   function downloadImage() {
     const cvs = canvasRef.current;
-    const rect = cvs.getBoundingClientRect();
     const tmp = document.createElement("canvas");
-    tmp.width = rect.width;
-    tmp.height = rect.height;
+    tmp.width = cvs.width;
+    tmp.height = cvs.height;
     const tctx = tmp.getContext("2d");
-    tctx.drawImage(cvs, 0, 0, rect.width, rect.height);
+    tctx.drawImage(cvs, 0, 0);
     const link = document.createElement("a");
     link.download = "beyond-the-brush-lite.png";
     link.href = tmp.toDataURL("image/png");
@@ -434,12 +412,11 @@ export default function CanvasApp({ userData }) {
     img.onload = () => {
       const cvs = canvasRef.current;
       const ctx = cvs.getContext("2d");
-      const rect = cvs.getBoundingClientRect();
       const iw = img.width;
       const ih = img.height;
-      const cw = rect.width / window.devicePixelRatio;
-      const ch = rect.height / window.devicePixelRatio;
-      const ratio = Math.min(cw / iw, ch / ih);
+      const cw = cvs.width;
+      const ch = cvs.height;
+      const ratio = Math.min(cw / iw, ch / ih) * 0.8; // 80% of available space
       const w = iw * ratio;
       const h = ih * ratio;
       const x = (cw - w) / 2;
@@ -536,14 +513,14 @@ export default function CanvasApp({ userData }) {
 
           <div
             ref={wrapperRef}
-            className="relative flex-1 border border-dashed rounded-lg overflow-hidden w-full h-[50vh] sm:h-[70vh]"
+            className="relative flex-1 border border-dashed rounded-lg overflow-hidden flex items-center justify-center"
           >
             <div
               style={{
                 transform: `scale(${zoom})`,
-                transformOrigin: "top left",
-                width: "100%",
-                height: "100%",
+                transformOrigin: "center center",
+                width: canvasSize.width,
+                height: canvasSize.height,
               }}
             >
               <canvas
@@ -556,8 +533,8 @@ export default function CanvasApp({ userData }) {
                 onPointerLeave={endDraw}
                 style={{ 
                   display: "block", 
-                  width: "100%", 
-                  height: "100%",
+                  width: canvasSize.width,
+                  height: canvasSize.height,
                   // Apply transform with 3D acceleration
                   transform: `translate3d(${translate.x}px, ${translate.y}px, 0)`,
                   backfaceVisibility: 'hidden',
@@ -577,8 +554,8 @@ export default function CanvasApp({ userData }) {
                 onBlur={() => {}}
                 style={{
                   position: "absolute",
-                  left: `${(textData.x / (canvasRef.current.width / window.devicePixelRatio)) * 100}%`,
-                  top: `${(textData.y / (canvasRef.current.height / window.devicePixelRatio)) * 100}%`,
+                  left: `${(textData.x / canvasSize.width) * 100}%`,
+                  top: `${(textData.y / canvasSize.height) * 100}%`,
                   transform: `scale(${1 / zoom})`,
                   transformOrigin: "top left",
                   color: color,
