@@ -1,3 +1,5 @@
+// Login.jsx
+
 import React, { useState } from "react";
 
 export default function Login({ onLogin }) {
@@ -13,7 +15,7 @@ export default function Login({ onLogin }) {
         <div className="text-center mb-8">
           <div className="w-32 h-32 mx-auto mb-4">
             <img 
-              src="../icon/logo.png" 
+              src="public/icon/logo.png" 
               alt="Beyond The Brush" 
               className="w-full h-full object-contain"
               onError={(e) => {

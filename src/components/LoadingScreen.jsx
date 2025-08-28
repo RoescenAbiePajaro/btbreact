@@ -1,3 +1,4 @@
+// LoadingScreen.jsx
 import React, { useEffect } from "react";
 
 export default function LoadingScreen({ progress, setProgress, onComplete }) {
@@ -21,7 +22,7 @@ export default function LoadingScreen({ progress, setProgress, onComplete }) {
       <div className="text-center">
         <div className="w-48 h-48 mx-auto mb-8">
           <img 
-            src="../icon/logo.png" 
+            src="public/icon/logo.png" 
             alt="Beyond The Brush" 
             className="w-full h-full object-contain"
             onError={(e) => {
