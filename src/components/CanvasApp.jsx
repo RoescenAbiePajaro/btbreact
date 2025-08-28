@@ -8,6 +8,7 @@ export default function CanvasApp({ userData }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState("#ff66b2");
   const [brushSize, setBrushSize] = useState(8);
+  const [eraserSize, setEraserSize] = useState(20); // New state for eraser size
   const [isEraser, setIsEraser] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -156,7 +157,7 @@ export default function CanvasApp({ userData }) {
     ctx.moveTo(pos.x, pos.y);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.lineWidth = brushSize;
+    ctx.lineWidth = isEraser ? eraserSize : brushSize; // Use appropriate size based on tool
     
     if (isEraser) {
       // Use source-over with white color to erase to background
@@ -368,6 +369,7 @@ export default function CanvasApp({ userData }) {
     setIsEraser(false);
     setToolMode("draw");
     setBrushSize(8);
+    setEraserSize(20); // Reset eraser size
     setColor("#ff66b2");
     setZoom(1); // reset zoom back to 100%
 
@@ -488,6 +490,30 @@ export default function CanvasApp({ userData }) {
               </div>
 
               <div className="flex items-center gap-2">
+                <label className="text-xs text-white">Eraser Size</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={200}
+                  value={eraserSize}
+                  onChange={(e) => setEraserSize(Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={eraserSize}
+                  onChange={(e) => {
+                    let val = Number(e.target.value);
+                    if (val < 1) val = 1;
+                    if (val > 200) val = 200;
+                    setEraserSize(val);
+                  }}
+                  className="w-16 px-1 py-0.5 rounded text-black text-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
                 <label className="text-xs text-white">Mode</label>
                 <div className="px-2 py-1 rounded bg-gray-50 text-sm">
                   {toolMode === "select"
@@ -506,6 +532,23 @@ export default function CanvasApp({ userData }) {
                   X: {Math.round(translate.x)} Y: {Math.round(translate.y)}
                 </div>
               )}
+
+              {/* Display current transform values */}
+        {toolMode === "translate" && (
+          <div className="text-gray-300 text-xs text-center bg-gray-700 p-2 rounded-lg w-full md:w-auto flex md:flex-row md:gap-2 justify-center items-center">
+            <div>Position:</div>
+            <div className="flex gap-2">
+              <span>X: {Math.round(translate.x)}</span>
+              <span>Y: {Math.round(translate.y)}</span>
+            </div>
+            <button
+              onClick={resetTransform}
+              className="mt-2 md:mt-0 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 w-full md:w-auto"
+            >
+              Reset Position
+            </button>
+          </div>
+        )}
             </div>
 
             
@@ -545,30 +588,46 @@ export default function CanvasApp({ userData }) {
 
             {/* Render the text input when isTyping is true */}
             {isTyping && (
-              <input
-                ref={textInputRef}
-                type="text"
-                autoFocus
-                value={textData.content}
-                onChange={(e) => setTextData({ ...textData, content: e.target.value })}
-                onBlur={() => {}}
+              <div
                 style={{
                   position: "absolute",
                   left: `${(textData.x / canvasSize.width) * 100}%`,
                   top: `${(textData.y / canvasSize.height) * 100}%`,
                   transform: `scale(${1 / zoom})`,
                   transformOrigin: "top left",
-                  color: color,
-                  fontSize: textData.fontSize * (1 / zoom),
-                  background: "transparent",
-                  border: "1px dashed white",
-                  outline: "none",
-                  padding: "2px",
-                  lineHeight: 1,
-                  pointerEvents: 'auto',
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
                   zIndex: 1000,
                 }}
-              />
+              >
+                <input
+                  ref={textInputRef}
+                  type="text"
+                  autoFocus
+                  value={textData.content}
+                  onChange={(e) => setTextData({ ...textData, content: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      drawTextOnCanvas();
+                    } else if (e.key === 'Escape') {
+                      cancelTextInput();
+                    }
+                  }}
+                  style={{
+                    color: color,
+                    fontSize: textData.fontSize * (1 / zoom),
+                    background: "rgba(0, 0, 0, 0.7)",
+                    border: "1px solid white",
+                    outline: "none",
+                    padding: "4px",
+                    lineHeight: 1,
+                    minWidth: "200px",
+                  }}
+                />
+                <div style={{ display: "flex", gap: "4px" }}>
+                </div>
+              </div>
             )}
             </div>
           </div>
@@ -593,6 +652,8 @@ export default function CanvasApp({ userData }) {
           setColor={setColor}
           brushSize={brushSize}
           setBrushSize={setBrushSize}
+          eraserSize={eraserSize}
+          setEraserSize={setEraserSize}
           handleFileInsert={handleFileInsert}
           toolMode={toolMode}
           setToolMode={setToolMode}

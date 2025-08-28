@@ -64,45 +64,17 @@ export default function Toolbar({
               </select>
             </div>
             
-            {isTyping && (
-              <div className="flex gap-2 mt-3 md:mt-0">
-                <button
-                  onClick={drawTextOnCanvas}
-                  className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                >
-                  Add
-                </button>
-                <button
-                  onClick={cancelTextInput}
-                  className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+            
           </div>
         )}
         
-        {/* Display current transform values */}
-        {toolMode === "translate" && (
-          <div className="text-gray-300 text-xs text-center bg-gray-700 p-2 rounded-lg w-full md:w-auto flex md:flex-row md:gap-2 justify-center items-center">
-            <div>Position:</div>
-            <div className="flex gap-2">
-              <span>X: {Math.round(translate.x)}</span>
-              <span>Y: {Math.round(translate.y)}</span>
-            </div>
-            <button
-              onClick={resetTransform}
-              className="mt-2 md:mt-0 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 w-full md:w-auto"
-            >
-              Reset Position
-            </button>
-          </div>
-        )}
+        
 
         {/* Main toolbar buttons - combined and centered */}
         <div className="flex items-center justify-center gap-2 flex-wrap w-full overflow-x-auto">
           {/* Tool Modes */}
+
+          
           <div className="flex gap-2">
             <button
               title="Add Text"
@@ -157,6 +129,8 @@ export default function Toolbar({
             >
               <i className="fas fa-arrows-alt text-sm"></i>
             </button>
+
+            
           </div>
           
           {/* Action Buttons */}
