@@ -54,6 +54,12 @@ export default function CanvasApp({ userData }) {
     pushHistory();
   }, []);
 
+  useEffect(() => {
+    if (toolMode !== 'text' && isTyping) {
+      drawTextOnCanvas();
+    }
+  }, [toolMode]);
+
   const redrawInsertedImages = () => {
     const cvs = canvasRef.current;
     const ctx = cvs.getContext("2d");
@@ -533,22 +539,7 @@ export default function CanvasApp({ userData }) {
                 </div>
               )}
 
-              {/* Display current transform values */}
-        {toolMode === "translate" && (
-          <div className="text-gray-300 text-xs text-center bg-gray-700 p-2 rounded-lg w-full md:w-auto flex md:flex-row md:gap-2 justify-center items-center">
-            <div>Position:</div>
-            <div className="flex gap-2">
-              <span>X: {Math.round(translate.x)}</span>
-              <span>Y: {Math.round(translate.y)}</span>
-            </div>
-            <button
-              onClick={resetTransform}
-              className="mt-2 md:mt-0 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 w-full md:w-auto"
-            >
-              Reset Position
-            </button>
-          </div>
-        )}
+            
             </div>
 
             
