@@ -519,6 +519,42 @@ export default function CanvasApp({ userData }) {
                 />
               </div>
 
+              {/* Font Size and Family Controls */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-white">Font Size</label>
+                <input
+                  type="range"
+                  min="8"
+                  max="72"
+                  value={textData.fontSize}
+                  onChange={(e) => setTextData({ ...textData, fontSize: Number(e.target.value) })}
+                  className="w-24"
+                />
+                <input
+                  type="number"
+                  min="8"
+                  max="72"
+                  value={textData.fontSize}
+                  onChange={(e) => setTextData({ ...textData, fontSize: Number(e.target.value) })}
+                  className="w-12 px-1 py-0.5 rounded text-black text-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-white">Font</label>
+                <select
+                  value={textData.font}
+                  onChange={(e) => setTextData({ ...textData, font: e.target.value })}
+                  className="w-28 px-1 py-0.5 rounded text-black text-sm"
+                >
+                  <option value="Arial">Arial</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Courier New">Courier New</option>
+                  <option value="Verdana">Verdana</option>
+                  <option value="Georgia">Georgia</option>
+                </select>
+              </div>
+
               <div className="flex items-center gap-2">
                 <label className="text-xs text-white">Mode</label>
                 <div className="px-2 py-1 rounded bg-gray-50 text-sm">
@@ -526,6 +562,8 @@ export default function CanvasApp({ userData }) {
                     ? "Select"
                     : toolMode === "translate"
                     ? "Translate"
+                    : toolMode === 'text' 
+                    ? "Text"
                     : isEraser
                     ? "Eraser"
                     : "Brush"}

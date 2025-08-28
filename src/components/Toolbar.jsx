@@ -24,51 +24,6 @@ export default function Toolbar({
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gray-800 p-2 shadow-lg z-10">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-center gap-2">
-        {/* Text input controls - only show when in text mode or typing */}
-        {(toolMode === "text" || isTyping) && (
-          <div className="bg-gray-700 p-3 rounded-lg flex flex-col md:flex-row md:items-center md:justify-center gap-2 w-full">
-            <div className="text-xs text-gray-300">Text Options:</div>
-            
-            <div className="flex items-center gap-1">
-              <label className="text-xs text-gray-300">Font Size</label>
-              <input
-                type="range"
-                min="8"
-                max="72"
-                value={textData.fontSize}
-                onChange={(e) => setTextData({ ...textData, fontSize: Number(e.target.value) })}
-                className="w-24"
-              />
-              <input
-                type="number"
-                min="8"
-                max="72"
-                value={textData.fontSize}
-                onChange={(e) => setTextData({ ...textData, fontSize: Number(e.target.value) })}
-                className="w-12 px-1 py-0.5 rounded text-black text-sm"
-              />
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <label className="text-xs text-gray-300">Font</label>
-              <select
-                value={textData.font}
-                onChange={(e) => setTextData({ ...textData, font: e.target.value })}
-                className="w-28 px-1 py-0.5 rounded text-black text-sm"
-              >
-                <option value="Arial">Arial</option>
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Courier New">Courier New</option>
-                <option value="Verdana">Verdana</option>
-                <option value="Georgia">Georgia</option>
-              </select>
-            </div>
-            
-            
-          </div>
-        )}
-        
-        
 
         {/* Main toolbar buttons - combined and centered */}
         <div className="flex items-center justify-center gap-2 flex-wrap w-full overflow-x-auto">
