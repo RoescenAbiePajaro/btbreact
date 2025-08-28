@@ -15,7 +15,7 @@ export default function Login({ onLogin }) {
         <div className="text-center mb-8">
           <div className="w-32 h-32 mx-auto mb-4">
             <img 
-              src="public/icon/logo.png" 
+              src="/icon/logo.png" 
               alt="Beyond The Brush" 
               className="w-full h-full object-contain"
               onError={(e) => {

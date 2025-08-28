@@ -11,6 +11,7 @@
       },
       {
         "source": "/images/(.*)",
+        "destination": "/public/images/(.*)",
         "headers": [
           {
             "key": "Cache-Control",
