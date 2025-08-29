@@ -531,6 +531,14 @@ export default function CanvasApp({ userData }) {
     setToolMode("translate");
   }
 
+  // Add scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-black p-0 flex flex-col">
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between mb-4">
@@ -538,7 +546,7 @@ export default function CanvasApp({ userData }) {
       </header>
 
       <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col">
-        <section className="flex-1 bg-black rounded-2xl shadow  flex flex-col">
+        <section className="flex-1 bg-black rounded-2xl shadow p-3 flex flex-col">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="md:hidden">
               <button 
@@ -880,6 +888,7 @@ export default function CanvasApp({ userData }) {
           translate={translate}
           setTranslate={setTranslate}
           resetTransform={resetTransform}
+          scrollToTop={scrollToTop}
         />
       </main>
     </div>

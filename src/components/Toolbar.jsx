@@ -20,11 +20,11 @@ export default function Toolbar({
   translate,
   setTranslate,
   resetTransform,
+  scrollToTop,
 }) {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gray-800 p-2 shadow-lg z-10">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-center gap-2">
-
         {/* Main toolbar buttons - combined and centered */}
         <div className="flex items-center justify-center gap-2 flex-wrap w-full overflow-x-auto">
           {/* Tool Modes */}
@@ -86,6 +86,35 @@ export default function Toolbar({
             
           </div>
           
+          {/* Zoom Controls */}
+          <div className="flex items-center gap-2">
+            <button
+              title="Zoom Out"
+              onClick={zoomOut}
+              className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+            >
+              <i className="fas fa-search-minus text-sm"></i>
+            </button>
+            <span className="text-white text-sm w-10 text-center">{Math.round(zoom * 100)}%</span>
+            <button
+              title="Zoom In"
+              onClick={zoomIn}
+              className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+            >
+              <i className="fas fa-search-plus text-sm"></i>
+            </button>
+            
+            {/* Scroll to top button */}
+            <div className="h-8 w-px bg-gray-600 mx-1"></div>
+            <button
+              title="Scroll to top"
+              onClick={scrollToTop}
+              className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 text-gray-300 hover:bg-blue-500 hover:text-white transition-colors"
+            >
+              <i className="fas fa-arrow-up text-sm"></i>
+            </button>
+          </div>
+          
           {/* Action Buttons */}
           <div className="flex gap-2">
             <button
@@ -111,23 +140,6 @@ export default function Toolbar({
               className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
             >
               <i className="fas fa-save text-sm"></i>
-            </button>
-          </div>
-          
-          {/* Zoom Controls */}
-          <div className="flex items-center gap-2 text-white">
-            <button 
-              onClick={zoomOut} 
-              className="w-10 h-10 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors flex items-center justify-center"
-            >
-              <i className="fas fa-minus text-sm"></i>
-            </button>
-            <div className="text-sm text-gray-300">{Math.round(zoom * 100)}%</div>
-            <button 
-              onClick={zoomIn} 
-              className="w-10 h-10 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors flex items-center justify-center"
-            >
-              <i className="fas fa-plus text-sm"></i>
             </button>
           </div>
         </div>
