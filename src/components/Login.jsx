@@ -10,7 +10,7 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 overflow-hidden">
       <div className="bg-black rounded-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-32 h-32 mx-auto mb-4">

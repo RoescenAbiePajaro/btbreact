@@ -18,8 +18,8 @@ export default function LoadingScreen({ progress, setProgress, onComplete }) {
   }, [setProgress, onComplete]);
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-center">
+    <div className="min-h-screen bg-black flex items-center justify-center overflow-hidden">
+      <div className="text-center p-4 w-full max-w-md">
         <div className="w-48 h-48 mx-auto mb-8">
           <img 
             src="/icon/logo.png" 

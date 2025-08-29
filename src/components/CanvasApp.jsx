@@ -534,7 +534,6 @@ export default function CanvasApp({ userData }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-black p-4 flex flex-col">
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between mb-4">
-        <h1 className="text-2xl">Beyond The Brush — Lite</h1>
       </header>
 
       <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col">
