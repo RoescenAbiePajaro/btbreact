@@ -23,6 +23,7 @@ export default function CanvasApp({ userData }) {
   // New state for handling text
   const [isTyping, setIsTyping] = useState(false);
   const [textData, setTextData] = useState({ x: 0, y: 0, content: "", fontSize: 24, font: "Arial" });
+  const [cursorVisible, setCursorVisible] = useState(false);
   
   // New state for translate
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
@@ -89,6 +90,29 @@ export default function CanvasApp({ userData }) {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isTyping, textData, color, historyIndex]);
+
+  // Effect to handle cursor blinking
+  useEffect(() => {
+    if (!isTyping) {
+      setCursorVisible(false);
+      return;
+    }
+
+    const cursorInterval = setInterval(() => {
+      setCursorVisible((prev) => !prev);
+    }, 500); // Blink every 500ms
+
+    return () => {
+      clearInterval(cursorInterval);
+    };
+  }, [isTyping]);
+
+  // Effect to redraw text and cursor when cursor visibility changes
+  useEffect(() => {
+    if (isTyping) {
+      handleTextChange(textData.content);
+    }
+  }, [cursorVisible]);
 
   const redrawInsertedImages = () => {
     const cvs = canvasRef.current;
@@ -329,6 +353,19 @@ export default function CanvasApp({ userData }) {
         ctx.fillStyle = color;
         ctx.textBaseline = 'top';
         ctx.fillText(newText, textData.x, textData.y);
+
+        // Draw blinking cursor
+        if (isTyping && cursorVisible) {
+          const textWidth = ctx.measureText(newText).width;
+          const cursorX = textData.x + textWidth;
+          ctx.beginPath();
+          ctx.moveTo(cursorX, textData.y);
+          ctx.lineTo(cursorX, textData.y + textData.fontSize);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
         ctx.restore();
       });
     }
