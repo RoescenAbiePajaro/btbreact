@@ -23,12 +23,13 @@ export default function CanvasApp({ userData }) {
   // New state for handling text
   const [isTyping, setIsTyping] = useState(false);
   const [textData, setTextData] = useState({ x: 0, y: 0, content: "", fontSize: 24, font: "Arial" });
-  const textInputRef = useRef(null);
   
   // New state for translate
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [transformStart, setTransformStart] = useState(null);
   const [isTranslating, setIsTranslating] = useState(false);
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   // Fixed canvas dimensions
   const [canvasSize] = useState({ width: 800, height: 600 });
@@ -56,9 +57,38 @@ export default function CanvasApp({ userData }) {
 
   useEffect(() => {
     if (toolMode !== 'text' && isTyping) {
-      drawTextOnCanvas();
+      // If tool is switched while typing, finalize the text
+      drawTextOnCanvas(true);
     }
   }, [toolMode]);
+
+  // Effect to handle keyboard input for the text tool
+  useEffect(() => {
+    if (!isTyping) return;
+
+    const handleKeyDown = (e) => {
+      e.preventDefault();
+      if (e.key === 'Enter' || e.key === 'Escape') {
+        drawTextOnCanvas(e.key === 'Enter');
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        handleTextChange((prev) => prev.slice(0, -1));
+        return;
+      }
+
+      // Allow alphanumeric, space, and symbol characters
+      if (e.key.length === 1) {
+        handleTextChange((prev) => prev + e.key);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isTyping, textData, color, historyIndex]);
 
   const redrawInsertedImages = () => {
     const cvs = canvasRef.current;
@@ -77,16 +107,23 @@ export default function CanvasApp({ userData }) {
     const rect = cvs.getBoundingClientRect();
     const clientX = e.clientX ?? (e.touches && e.touches[0].clientX);
     const clientY = e.clientY ?? (e.touches && e.touches[0].clientY);
-    const x =
-      ((clientX - rect.left) / rect.width) * cvs.width;
-    const y =
-      ((clientY - rect.top) / rect.height) * cvs.height;
+
+    // Inverse transform the pointer coordinates
+    const x = (clientX - rect.left) / zoom;
+    const y = (clientY - rect.top) / zoom;
+
     return { x, y };
   }
 
   function beginDraw(e) {
     if (toolMode === "text") {
       const pos = getPointerPos(e);
+
+      // If already typing, finalize the current text first
+      if (isTyping) {
+        drawTextOnCanvas(true);
+      }
+
       setTextData({ 
         ...textData, 
         x: pos.x, 
@@ -94,12 +131,6 @@ export default function CanvasApp({ userData }) {
         content: "" 
       });
       setIsTyping(true);
-      
-      setTimeout(() => {
-        if (textInputRef.current) {
-          textInputRef.current.focus();
-        }
-      }, 0);
       return;
     }
 
@@ -283,46 +314,60 @@ export default function CanvasApp({ userData }) {
     }
   }
 
-  // Function to draw text on the canvas
-  function drawTextOnCanvas() {
-    if (!textData.content.trim()) {
-      setIsTyping(false);
-      return;
+  // New function to handle text changes and redraw the canvas
+  function handleTextChange(newContent) {
+    const newText = typeof newContent === 'function' ? newContent(textData.content) : newContent;
+
+    // Restore the canvas to its state before typing started
+    if (historyIndex >= 0) {
+      restoreFromDataURL(history[historyIndex], () => {
+        // After restoring, draw the updated text
+        const cvs = canvasRef.current;
+        const ctx = cvs.getContext("2d");
+        ctx.save();
+        ctx.font = `${textData.fontSize}px ${textData.font}`;
+        ctx.fillStyle = color;
+        ctx.textBaseline = 'top';
+        ctx.fillText(newText, textData.x, textData.y);
+        ctx.restore();
+      });
     }
-    
-    const cvs = canvasRef.current;
-    const ctx = cvs.getContext("2d");
-    
-    // Calculate metrics before drawing
-    ctx.save();
-    ctx.font = `${textData.fontSize}px ${textData.font}`;
-    const metrics = ctx.measureText(textData.content);
-    const actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-    ctx.restore();
-    
-    // Draw the text
-    ctx.save();
-    ctx.font = `${textData.fontSize}px ${textData.font}`;
-    ctx.fillStyle = color;
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'left';
-    
-    // Adjust y position to account for the text's actual height
-    const yPos = textData.y;
-    
-    ctx.fillText(textData.content, textData.x, yPos);
-    ctx.restore();
-    
-    // Reset states and save to history
+
+    setTextData({ ...textData, content: newText });
+  }
+
+  // Function to draw text on the canvas
+  function drawTextOnCanvas(finalize) {
+    if (!isTyping) return;
+
     setIsTyping(false);
-    setTextData({ ...textData, content: "" });
-    pushHistory();
+
+    if (finalize && textData.content.trim()) {
+      // Restore canvas and draw final text
+      restoreFromDataURL(history[historyIndex], () => {
+        const cvs = canvasRef.current;
+        const ctx = cvs.getContext('2d');
+        ctx.save();
+        ctx.font = `${textData.fontSize}px ${textData.font}`;
+        ctx.fillStyle = color;
+        ctx.textBaseline = 'top';
+        ctx.fillText(textData.content, textData.x, textData.y);
+        ctx.restore();
+        pushHistory(); // Save the final state
+        setTextData({ ...textData, content: '' });
+      });
+    } else {
+      // If not finalizing (e.g., Escape key), just restore the original state
+      if (historyIndex >= 0) {
+        restoreFromDataURL(history[historyIndex]);
+      }
+      setTextData({ ...textData, content: '' });
+    }
   }
   
   // Function to cancel text input without drawing
   function cancelTextInput() {
-    setIsTyping(false);
-    setTextData({ ...textData, content: "" });
+    drawTextOnCanvas(false);
   }
   
   function pushHistory() {
@@ -351,7 +396,7 @@ export default function CanvasApp({ userData }) {
     setSelectedArea(null);
   }
 
-  function restoreFromDataURL(dataURL) {
+  function restoreFromDataURL(dataURL, callback) {
     const img = new Image();
     img.onload = () => {
       const cvs = canvasRef.current;
@@ -359,6 +404,7 @@ export default function CanvasApp({ userData }) {
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       ctx.drawImage(img, 0, 0);
       redrawInsertedImages();
+      if (callback) callback();
     };
     img.src = dataURL;
   }
@@ -457,7 +503,16 @@ export default function CanvasApp({ userData }) {
       <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col">
         <section className="flex-1 bg-black rounded-2xl shadow p-4 flex flex-col">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="md:hidden">
+              <button 
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 text-gray-300 hover:bg-gray-600"
+              >
+                <i className="fas fa-bars"></i>
+              </button>
+            </div>
+
+            <div className="hidden md:flex items-center gap-3 flex-wrap">
               <div className="flex gap-2">
                 {["#ff00ff", "#0066ff", "#00ff00", "#fff500"].map((c) => (
                   <button
@@ -585,6 +640,138 @@ export default function CanvasApp({ userData }) {
             
           </div>
 
+          {isMenuOpen && (
+            <div className="absolute top-16 left-4 right-4 bg-gray-800 p-4 rounded-lg shadow-lg z-20 flex flex-col gap-4 md:hidden">
+              <button onClick={() => setIsMenuOpen(false)} className="absolute top-2 right-2 text-white">
+                  <i className="fas fa-times"></i>
+              </button>
+              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex gap-2">
+                {["#ff00ff", "#0066ff", "#00ff00", "#fff500"].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => {
+                      setColor(c);
+                      setIsEraser(false);
+                    }}
+                    className="w-8 h-8 rounded"
+                    style={{ background: c }}
+                  />
+                ))}
+              </div>
+
+              {/* Brush/Eraser size control */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-white">Size</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={200}
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={brushSize}
+                  onChange={(e) => {
+                    let val = Number(e.target.value);
+                    if (val < 1) val = 1;
+                    if (val > 200) val = 200;
+                    setBrushSize(val);
+                  }}
+                  className="w-16 px-1 py-0.5 rounded text-black text-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-white">Eraser Size</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={200}
+                  value={eraserSize}
+                  onChange={(e) => setEraserSize(Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={eraserSize}
+                  onChange={(e) => {
+                    let val = Number(e.target.value);
+                    if (val < 1) val = 1;
+                    if (val > 200) val = 200;
+                    setEraserSize(val);
+                  }}
+                  className="w-16 px-1 py-0.5 rounded text-black text-sm"
+                />
+              </div>
+
+              {/* Font Size and Family Controls */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-white">Font Size</label>
+                <input
+                  type="range"
+                  min="8"
+                  max="72"
+                  value={textData.fontSize}
+                  onChange={(e) => setTextData({ ...textData, fontSize: Number(e.target.value) })}
+                  className="w-24"
+                />
+                <input
+                  type="number"
+                  min="8"
+                  max="72"
+                  value={textData.fontSize}
+                  onChange={(e) => setTextData({ ...textData, fontSize: Number(e.target.value) })}
+                  className="w-12 px-1 py-0.5 rounded text-black text-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-white">Font</label>
+                <select
+                  value={textData.font}
+                  onChange={(e) => setTextData({ ...textData, font: e.target.value })}
+                  className="w-28 px-1 py-0.5 rounded text-black text-sm"
+                >
+                  <option value="Arial">Arial</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Courier New">Courier New</option>
+                  <option value="Verdana">Verdana</option>
+                  <option value="Georgia">Georgia</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-white">Mode</label>
+                <div className="px-2 py-1 rounded bg-gray-50 text-sm">
+                  {toolMode === "select"
+                    ? "Select"
+                    : toolMode === "translate"
+                    ? "Translate"
+                    : toolMode === 'text' 
+                    ? "Text"
+                    : isEraser
+                    ? "Eraser"
+                    : "Brush"}
+                </div>
+              </div>
+              
+              {/* Display current transform values */}
+              {toolMode === "translate" && (
+                <div className="text-white text-xs">
+                  X: {Math.round(translate.x)} Y: {Math.round(translate.y)}
+                </div>
+              )}
+
+            
+            </div>
+            </div>
+          )}
+
           <div
             ref={wrapperRef}
             className="relative flex-1 border border-dashed rounded-lg overflow-hidden flex items-center justify-center"
@@ -614,52 +801,9 @@ export default function CanvasApp({ userData }) {
                   backfaceVisibility: 'hidden',
                   WebkitBackfaceVisibility: 'hidden',
                   WebkitTransform: 'translateZ(0)',
+                  cursor: toolMode === 'text' ? 'text' : 'default',
                 }}
               />
-
-            {/* Render the text input when isTyping is true */}
-            {isTyping && (
-              <div
-                style={{
-                  position: "absolute",
-                  left: `${(textData.x / canvasSize.width) * 100}%`,
-                  top: `${(textData.y / canvasSize.height) * 100}%`,
-                  transform: `scale(${1 / zoom})`,
-                  transformOrigin: "top left",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                  zIndex: 1000,
-                }}
-              >
-                <input
-                  ref={textInputRef}
-                  type="text"
-                  autoFocus
-                  value={textData.content}
-                  onChange={(e) => setTextData({ ...textData, content: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      drawTextOnCanvas();
-                    } else if (e.key === 'Escape') {
-                      cancelTextInput();
-                    }
-                  }}
-                  style={{
-                    color: color,
-                    fontSize: textData.fontSize * (1 / zoom),
-                    background: "rgba(0, 0, 0, 0.7)",
-                    border: "1px solid white",
-                    outline: "none",
-                    padding: "4px",
-                    lineHeight: 1,
-                    minWidth: "200px",
-                  }}
-                />
-                <div style={{ display: "flex", gap: "4px" }}>
-                </div>
-              </div>
-            )}
             </div>
           </div>
 
