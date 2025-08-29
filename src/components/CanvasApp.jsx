@@ -532,13 +532,13 @@ export default function CanvasApp({ userData }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-black p-4 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-black to-black p-0 flex flex-col">
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between mb-4">
 
       </header>
 
       <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col">
-        <section className="flex-1 bg-black rounded-2xl shadow p-4 flex flex-col">
+        <section className="flex-1 bg-black rounded-2xl shadow  flex flex-col">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="md:hidden">
               <button 
