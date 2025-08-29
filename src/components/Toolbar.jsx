@@ -28,8 +28,6 @@ export default function Toolbar({
         {/* Main toolbar buttons - combined and centered */}
         <div className="flex items-center justify-center gap-2 flex-wrap w-full overflow-x-auto">
           {/* Tool Modes */}
-
-          
           <div className="flex gap-2">
             <button
               title="Add Text"
@@ -106,7 +104,10 @@ export default function Toolbar({
             </button>
             <button
               title="Save"
-              onClick={downloadImage}
+              onClick={() => {
+                downloadImage();
+                setToolMode("draw");
+              }}
               className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
             >
               <i className="fas fa-save text-sm"></i>

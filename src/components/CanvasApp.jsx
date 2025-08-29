@@ -440,10 +440,12 @@ export default function CanvasApp({ userData }) {
 
   function zoomIn() {
     setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)));
+    setToolMode("translate");
   }
 
   function zoomOut() {
     setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)));
+    setToolMode("translate");
   }
 
   return (
