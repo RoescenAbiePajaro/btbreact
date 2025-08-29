@@ -534,6 +534,7 @@ export default function CanvasApp({ userData }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-black p-4 flex flex-col">
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between mb-4">
+
       </header>
 
       <main className="max-w-6xl mx-auto w-full flex gap-4 flex-1 flex-col">
