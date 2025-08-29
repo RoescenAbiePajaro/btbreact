@@ -834,7 +834,8 @@ export default function CanvasApp({ userData }) {
           setToolMode={setToolMode}
           // Pass text state and setters to Toolbar
           textData={textData}
-          setTextData={setTextData}
+          setTextData={setTextData} // Keep this for font size/family changes
+          handleTextChange={handleTextChange} // Pass the handler for content changes
           drawTextOnCanvas={drawTextOnCanvas}
           cancelTextInput={cancelTextInput}
           isTyping={isTyping}

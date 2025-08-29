@@ -131,6 +131,32 @@ export default function Toolbar({
             </button>
           </div>
         </div>
+
+        {/* Text Input for Mobile */}
+        {toolMode === "text" && isTyping && (
+          <div className="flex items-center justify-center gap-2 w-full mt-2 md:hidden">
+            <input
+              type="text"
+              value={textData.content}
+              onChange={(e) => setTextData({ ...textData, content: e.target.value })}
+              placeholder="Type here..."
+              className="px-2 py-1 rounded bg-gray-700 text-white flex-grow"
+            />
+            <button
+              onClick={() => drawTextOnCanvas(true)}
+              className="px-3 py-1 rounded bg-blue-500 text-white"
+            >
+              Done
+            </button>
+            <button
+              onClick={cancelTextInput}
+              className="px-3 py-1 rounded bg-gray-600 text-white"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
